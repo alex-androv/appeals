@@ -10,12 +10,59 @@
           <div class="form-group">
             <label>(от {{ formatDate(editedAppeal.created_at) }})</label>
           </div>
-          <div class="form-group">
+          <!-- <div class="form-group">
             <input id="premise" v-model="premiseSearch" @input="searchPremises" placeholder="Дом">
           </div>
           <div class="form-group">
             <input id="apartment" v-model="apartmentSearch" @input="searchApartments" placeholder="Квартира">
+          </div> -->
+          <div class="form-group">
+        <div class="dropdown-autocomplete">
+          <input 
+            v-model="premiseSearch" 
+            @input="searchPremises" 
+            @focus="isPremiseDropdownOpen = true"
+            @blur="closePremiseDropdown"
+            placeholder="Дом"
+          >
+          <div v-if="isPremiseDropdownOpen" class="dropdown-menu">
+            <div 
+              v-for="premise in premises" 
+              :key="premise.id"
+              @mousedown="selectPremise(premise)"
+              class="dropdown-item"
+            >
+              {{ premise.short_address || premise.full_address }}
+            </div>
           </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="dropdown-autocomplete">
+          <input 
+            v-model="apartmentSearch" 
+            @input="searchApartments" 
+            @focus="isApartmentDropdownOpen = true"
+            @blur="closeApartmentDropdown"
+            placeholder="Квартира"
+            :disabled="!editedAppeal.premise_id"
+          >
+          <div v-if="isApartmentDropdownOpen" class="dropdown-menu">
+            <div 
+              v-for="apartment in apartments" 
+              :key="apartment.id"
+              @mousedown="selectApartment(apartment)"
+              class="dropdown-item"
+            >
+              <!-- {{ apartment.object_type }} {{ apartment.number }} -->
+              {{ formatApartmentDisplay(apartment) }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
           <div class="form-group">
             <input id="lastName" v-model="editedAppeal.applicant.last_name" required placeholder="Фамилия">
           </div>
@@ -61,7 +108,9 @@
         apartments: [],
         premiseSearch: '',
         apartmentSearch: '',
-        error: null
+        error: null,
+        isPremiseDropdownOpen: false,
+        isApartmentDropdownOpen: false,
       }
     },
     watch: {
@@ -82,30 +131,30 @@
       formatDate(dateString) {
         return new Date(dateString).toLocaleString()
       },
-      searchPremises: debounce(async function() {
-        try {
-          const response = await this.$axios.get('geo/v2.0/user-premises/', {
-            params: { search: this.premiseSearch }
-          })
-          this.premises = response.data
-        } catch (error) {
-          console.error('Error searching premises:', error)
-        }
-      }, 300),
-      searchApartments: debounce(async function() {
-        if (!this.editedAppeal.premise_id) return
-        try {
-          const response = await this.$axios.get('geo/v1.0/apartments/', {
-            params: { 
-              premise_id: this.editedAppeal.premise_id,
-              search: this.apartmentSearch
-            }
-          })
-          this.apartments = response.data
-        } catch (error) {
-          console.error('Error searching apartments:', error)
-        }
-      }, 300),
+      // searchPremises: debounce(async function() {
+      //   try {
+      //     const response = await this.$axios.get('geo/v2.0/user-premises/', {
+      //       params: { search: this.premiseSearch }
+      //     })
+      //     this.premises = response.data
+      //   } catch (error) {
+      //     console.error('Error searching premises:', error)
+      //   }
+      // }, 300),
+      // searchApartments: debounce(async function() {
+      //   if (!this.editedAppeal.premise_id) return
+      //   try {
+      //     const response = await this.$axios.get('geo/v1.0/apartments/', {
+      //       params: { 
+      //         premise_id: this.editedAppeal.premise_id,
+      //         search: this.apartmentSearch
+      //       }
+      //     })
+      //     this.apartments = response.data
+      //   } catch (error) {
+      //     console.error('Error searching apartments:', error)
+      //   }
+      // }, 300),
       onPremiseChange() {
         this.editedAppeal.apartment_id = null
         this.apartmentSearch = ''
@@ -125,6 +174,89 @@
         this.$emit('close')
         this.editedAppeal = null
         this.error = null
+      },
+      searchPremises: debounce(async function() {
+      if (this.premiseSearch.length < 2) {
+        this.premises = []
+        return
+      }
+      try {
+        const response = await this.$axios.get('geo/v2.0/user-premises/', {
+          params: { search: this.premiseSearch }
+        })
+        this.premises = response.data.results || []
+        this.isPremiseDropdownOpen = this.premises.length > 0
+      } catch (error) {
+        console.error('Error searching premises:', error)
+      }
+    }, 300),
+
+    searchApartments: debounce(async function() {
+      if (!this.editedAppeal.premise_id || this.apartmentSearch.length < 2) {
+        this.apartments = []
+        return
+      }
+      try {
+        const response = await this.$axios.get('geo/v1.0/apartments/', {
+          params: { 
+            premise_id: this.editedAppeal.premise_id,
+            search: this.apartmentSearch
+          }
+        })
+        this.apartments = response.data.results || []
+        this.isApartmentDropdownOpen = this.apartments.length > 0
+      } catch (error) {
+        console.error('Error searching apartments:', error)
+      }
+    }, 300),
+
+    selectPremise(premise) {
+      this.editedAppeal.premise_id = premise.id
+      this.editedAppeal.premise = premise
+      this.premiseSearch = premise.short_address || premise.full_address
+      this.isPremiseDropdownOpen = false
+      this.editedAppeal.apartment_id = null
+      this.editedAppeal.apartment = null
+      this.apartmentSearch = ''
+      this.apartments = []
+    },
+
+    selectApartment(apartment) {
+      this.editedAppeal.apartment_id = apartment.id
+      this.editedAppeal.apartment = apartment
+      this.apartmentSearch = this.formatApartmentDisplay(apartment)
+      this.isApartmentDropdownOpen = false
+    },
+
+    formatApartmentDisplay(apartment) {
+      if (!apartment) return ''
+      const type = apartment.object_type ? `${apartment.object_type} ` : ''
+      return `${type}${apartment.number}`
+    },
+
+    closePremiseDropdown() {
+      setTimeout(() => {
+        this.isPremiseDropdownOpen = false
+      }, 200)
+    },
+
+    closeApartmentDropdown() {
+      setTimeout(() => {
+        this.isApartmentDropdownOpen = false
+      }, 200)
+    },
+
+    },
+    watch: {
+      appeal: {
+        handler(newAppeal) {
+          if (newAppeal) {
+            this.editedAppeal = JSON.parse(JSON.stringify(newAppeal))
+            this.premiseSearch = this.editedAppeal.premise ? (this.editedAppeal.premise.short_address || this.editedAppeal.premise.full_address) : ''
+            this.apartmentSearch = this.editedAppeal.apartment ? this.formatApartmentDisplay(this.editedAppeal.apartment) : ''
+          }
+        },
+        immediate: true
       }
     }
   }

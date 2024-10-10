@@ -59,7 +59,6 @@
     </div>
 
     <edit-appeal-modal
-      v-if="showEditModal"
       :show="showEditModal"
       :appeal="selectedAppeal"
       @close="closeEditModal"
@@ -67,7 +66,6 @@
     />
 
     <create-appeal-modal
-      v-if="showCreateModal"
       :show="showCreateModal"
       @close="closeCreateModal"
       @appeal-created="onAppealCreated"
@@ -121,6 +119,7 @@ export default {
         })
         this.setAppeals(Array.isArray(response.data.results) ? response.data.results : [])
         this.totalPages = Math.ceil((response.data.count || 0) / this.pageSize)
+        console.log(response.data)
       } catch (error) {
         console.error('Error loading appeals:', error)
         this.error = 'Failed to load appeals. Please try again.'
@@ -155,11 +154,23 @@ export default {
       if (!dateString) return 'N/A'
       return new Date(dateString).toLocaleDateString()
     },
+    // formatAddress(appeal) {
+    //   if (!appeal) return 'N/A'
+    //   const premise = appeal.premise && typeof appeal.premise === 'object' ? appeal.premise.name : appeal.premise
+    //   const apartment = appeal.apartment && typeof appeal.apartment === 'object' ? appeal.apartment.name : appeal.apartment
+    //   return `${premise || ''} ${apartment || ''}`.trim() || 'N/A'
+    // },
     formatAddress(appeal) {
-      if (!appeal) return 'N/A'
-      const premise = appeal.premise && typeof appeal.premise === 'object' ? appeal.premise.name : appeal.premise
-      const apartment = appeal.apartment && typeof appeal.apartment === 'object' ? appeal.apartment.name : appeal.apartment
-      return `${premise || ''} ${apartment || ''}`.trim() || 'N/A'
+      if (!appeal || !appeal.premise || !appeal.apartment) return 'N/A';
+      
+      let address = appeal.premise.short_address || appeal.premise.full_address || '';
+      
+      if (appeal.apartment) {
+        if (address) address += ', ';
+        address += `${appeal.apartment.object_type} ${appeal.apartment.number}`;
+      }
+      
+      return address || 'N/A';
     },
     formatApplicant(applicant) {
       if (!applicant || typeof applicant !== 'object') return 'N/A'
