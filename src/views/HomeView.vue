@@ -7,7 +7,7 @@
       <select v-model="selectedPremise" @change="loadAppeals">
         <option value="">Дом</option>
         <option v-for="premise in premises" :key="premise.id" :value="premise.id">
-          {{ premise.name }}
+          {{ premise.short_address || premise.full_address }}
         </option>
       </select>
     </div>
@@ -119,10 +119,9 @@ export default {
         })
         this.setAppeals(Array.isArray(response.data.results) ? response.data.results : [])
         this.totalPages = Math.ceil((response.data.count || 0) / this.pageSize)
-        console.log(response.data)
       } catch (error) {
         console.error('Error loading appeals:', error)
-        this.error = 'Failed to load appeals. Please try again.'
+        this.error = 'Ошибка загрузки'
         if (error.response && error.response.status === 403) {
           this.$router.push('/login')
         }
@@ -135,10 +134,10 @@ export default {
       this.error = null
       try {
         const response = await this.$axios.get('geo/v2.0/user-premises/')
-        this.premises = Array.isArray(response.data) ? response.data : []
+        this.premises = Array.isArray(response.data.results) ? response.data.results : []
       } catch (error) {
         console.error('Error loading premises:', error)
-        this.error = 'Failed to load premises. Please try again.'
+        this.error = 'Ошибка загрузки'
         if (error.response && error.response.status === 403) {
           this.$router.push('/login')
         }
@@ -154,12 +153,6 @@ export default {
       if (!dateString) return 'N/A'
       return new Date(dateString).toLocaleDateString()
     },
-    // formatAddress(appeal) {
-    //   if (!appeal) return 'N/A'
-    //   const premise = appeal.premise && typeof appeal.premise === 'object' ? appeal.premise.name : appeal.premise
-    //   const apartment = appeal.apartment && typeof appeal.apartment === 'object' ? appeal.apartment.name : appeal.apartment
-    //   return `${premise || ''} ${apartment || ''}`.trim() || 'N/A'
-    // },
     formatAddress(appeal) {
       if (!appeal || !appeal.premise || !appeal.apartment) return 'N/A';
       

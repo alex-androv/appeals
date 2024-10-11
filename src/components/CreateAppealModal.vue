@@ -4,49 +4,6 @@
         <h2>Создание заявки</h2>
         <div v-if="error" class="error">{{ error }}</div>
         <form @submit.prevent="createAppeal">
-          <!-- <div class="form-group">
-            <div class="dropdown-autocomplete">
-              <input 
-                v-model="premiseSearch" 
-                @input="searchPremises" 
-                @focus="isPremiseDropdownOpen = true"
-                @blur="closePremiseDropdown"
-                placeholder="Дом"
-              >
-              <div v-if="isPremiseDropdownOpen" class="dropdown-menu">
-                <div 
-                  v-for="premise in premises" 
-                  :key="premise.id"
-                  @mousedown="selectPremise(premise)"
-                  class="dropdown-item"
-                >
-                  {{ premise.name }}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="form-group">
-            <div class="dropdown-autocomplete">
-              <input 
-                v-model="apartmentSearch" 
-                @input="searchApartments" 
-                @focus="isApartmentDropdownOpen = true"
-                @blur="closeApartmentDropdown"
-                placeholder="Квартира"
-                :disabled="!newAppeal.premise_id"
-              >
-              <div v-if="isApartmentDropdownOpen" class="dropdown-menu">
-                <div 
-                  v-for="apartment in apartments" 
-                  :key="apartment.id"
-                  @mousedown="selectApartment(apartment)"
-                  class="dropdown-item"
-                >
-                  {{ apartment.name }}
-                </div>
-              </div>
-            </div>
-          </div> -->
           <div class="form-group">
           <div class="dropdown-autocomplete">
             <input 
@@ -163,7 +120,7 @@
         this.isPremiseDropdownOpen = this.premises.length > 0
       } catch (error) {
         console.error('Error searching premises:', error)
-        this.error = 'Failed to load premises. Please try again.'
+        this.error = 'Ошибка загрузки'
       }
     }, 300),
 
@@ -183,7 +140,7 @@
         this.isApartmentDropdownOpen = this.apartments.length > 0
       } catch (error) {
         console.error('Error searching apartments:', error)
-        this.error = 'Failed to load apartments. Please try again.'
+        this.error = 'Ошибка загрузки'
       }
     }, 300),
 
@@ -255,9 +212,7 @@
         }
         
         try {
-            console.log('Sending appeal data:', this.newAppeal);
             const response = await this.$axios.post('appeals/v1.0/appeals/', this.newAppeal);
-            console.log('Server response:', response.data);
             this.$emit('appeal-created');
             this.close();
         } catch (error) {
